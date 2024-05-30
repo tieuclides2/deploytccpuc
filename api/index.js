@@ -32,6 +32,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Rotas
 
+app.get('/', (req, res) => {
+  res.json('Funcionou')
+};
+
 // Obter todos os projetos
 app.get('/projetos', (req, res) => {
   connection.query('SELECT projetos.*, category.name as name_category FROM projetos inner join category on category.id =  projetos.idcategory', (err, rows) => {

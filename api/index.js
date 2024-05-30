@@ -34,7 +34,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/', (req, res) => {
   res.json('Funcionou')
-};
+});
 
 // Obter todos os projetos
 app.get('/projetos', (req, res) => {

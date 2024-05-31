@@ -1,104 +1,144 @@
 const express = require('express');
-const { Client } = require("pg");
+const mysql = require('mysql');
 const bodyParser = require('body-parser');
+
 const cors = require('cors');
+
 
 const app = express();
 const port = 3000;
+app.use(cors());
 
-// Configuração do middleware CORS
-const corsOptions = {
-  origin: 'http://localhost:3000', // Altere para seu domínio específico se necessário.
-  methods: 'GET,POST,PUT,DELETE',
-  allowedHeaders: 'Content-Type,Authorization', // Corrigido aqui
-  optionsSuccessStatus: 204
-};
-app.use(cors(corsOptions));
+// Configuração do MySQL
+const connection = mysql.createConnection({
+  host: '127.0.0.1',
+  user: 'root',
+  password: 'root',
+  database: 'puc'
+});
 
+// Conectar ao MySQL
+connection.connect(err => {
+  if (err) {
+    console.error('Erro ao conectar ao MySQL:', err);
+    return;
+  }
+  console.log('Conectado ao MySQL');
+});
+
+// Middleware para análise do corpo das requisições
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Adicionar cabeçalhos CORS manualmente
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3000'); // Altere para seu domínio específico se necessário
-  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS'); // Permite esses métodos
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Permite esses cabeçalhos
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204); // Responde com status 204 para requisições OPTIONS
-  }
-  next();
-});
-
 // Rotas
 
-app.get('/', (req, res) => {
-  res.json("funcionou")
-});
-
 // Obter todos os projetos
-app.get('/projetos', async (req, res) => {
-  const client = new Client("postgresql://tcc_puc:HrmmTM8fgGIQHfw9EWdIVg@deploy-puctcc-2280.g8x.gcp-southamerica-east1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full");
-  try {
-    await client.connect();
-    const result = await client.query('SELECT projetos.*, category.name as name_category FROM projetos LEFT JOIN category ON category.id = projetos.idcategory');
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error("Error executing query:", err);
-    res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    await client.end();
-  }
+app.get('/projetos', (req, res) => {
+  connection.query('SELECT projetos.*, category.name as name_category FROM projetos inner join category on category.id =  projetos.idcategory', (err, rows) => {
+    if (err) throw err;
+    res.json(rows);
+  });
 });
 
-app.get('/categorias', async (req, res) => {
-  const client = new Client("postgresql://tcc_puc:HrmmTM8fgGIQHfw9EWdIVg@deploy-puctcc-2280.g8x.gcp-southamerica-east1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full");
-  try {
-    await client.connect();
-    const result = await client.query('SELECT * FROM category');
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error("Error executing query:", err);
-    res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    await client.end();
-  }
+app.get('/categorias', (req, res) => {
+  connection.query('SELECT * FROM category', (err, rows) => {
+    if (err) throw err;
+    res.json(rows);
+  });
 });
 
-app.get('/projetos/:id', async (req, res) => {
+// Obter um projeto específico por ID
+app.get('/projetos/:id', (req, res) => {
   const { id } = req.params;
-  const client = new Client("postgresql://tcc_puc:HrmmTM8fgGIQHfw9EWdIVg@deploy-puctcc-2280.g8x.gcp-southamerica-east1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full");
-  try {
-    await client.connect();
-    const result = await client.query('SELECT * FROM projetos WHERE id = $1', [id]);
-    res.status(200).json(result.rows[0]);
-  } catch (err) {
-    console.error("Error executing query:", err);
-    res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    await client.end();
-  }
+  connection.query('SELECT * FROM projetos WHERE projetos.id = ?', id, (err, rows) => {
+    if (err) throw err;
+    res.json(rows[0]);
+  });
 });
 
-app.post('/login', async (req, res) => {
+// logar
+
+app.post('/login', (req, res) => {
   const { email, password } = req.body;
-  const client = new Client("postgresql://tcc_puc:HrmmTM8fgGIQHfw9EWdIVg@deploy-puctcc-2280.g8x.gcp-southamerica-east1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full");
-  try {
-    await client.connect();
-    const result = await client.query('SELECT * FROM "user" WHERE email = $1 AND password = $2', [email, password]);
-    if (result.rows.length > 0) {
-      res.status(200).json(result.rows[0]);
-    } else {
-      res.status(401).json({ error: 'Invalid credentials' });
-    }
-  } catch (err) {
-    console.error("Error executing query:", err);
-    res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    await client.end();
-  }
+  connection.query('SELECT * FROM user WHERE name = ? and password = ?', [email, password], (err, rows) => {
+    if (err) throw err;
+    res.json(rows[0]);
+  });
 });
 
-// Adicionar as outras rotas de maneira semelhante...
+app.get('/services/:id', (req, res) => {
+  const { id } = req.params;
+  connection.query('SELECT * FROM services where idproject = ?', id, (err, rows) => {
+    if (err) throw err;
+    res.json(rows);
+  });
+});
+
+// Criar um novo projeto
+app.post('/projetos', (req, res) => {
+  const { name, budget, idcategory } = req.body;
+  connection.query('INSERT INTO projetos (name, budget, idcategory) VALUES (?, ?, ?)', [name, budget, idcategory], (err, result) => {
+    if (err) throw err;
+    res.send('Projeto criado com sucesso');
+  });
+});
+
+//criar nova categoria
+app.post('/newcategory', (req, res) => {
+  const { name } = req.body;
+  connection.query('INSERT INTO category (name) VALUES (?)', [name], (err, result) => {
+    if (err) throw err;
+    res.send('Categoria criada com sucesso');
+  });
+});
+
+app.post('/services', (req, res) => {
+  const { name, description, cost, idproject } = req.body;
+  console.log(req.body)
+  connection.query('INSERT INTO services (name, description, cost, idproject) VALUES (?, ?, ?, ?)', [name, description, cost, idproject], (err, result) => {
+    if (err) throw err;
+    res.send('Serviço criado com sucesso');
+  });
+});
+
+// efetuar cadastro 
+app.post('/user', (req, res) => {
+  const { name, email, password } = req.body;
+  console.log(req.body)
+  connection.query('INSERT INTO user (name, email, password) VALUES (?, ?, ?)', [name, email, password], (err, result) => {
+    if (err) throw err;
+    res.send('Usuario criado com sucesso!');
+  });
+});
+
+// Atualizar um projeto existente
+app.put('/projetos/:id', (req, res) => {
+  const { id } = req.params;
+  const { nome, orcamento, categoria } = req.body;
+  connection.query('UPDATE projetos SET nome = ?, orcamento = ?, categoria = ? WHERE id = ?', [nome, orcamento, categoria, id], (err, result) => {
+    if (err) throw err;
+    res.send('Projeto atualizado com sucesso');
+  });
+});
+
+// Excluir um projeto existente
+app.delete('/projetos/:id', (req, res) => {
+  const { id } = req.params;
+  connection.query('DELETE FROM projetos WHERE id = ?', id, (err, result) => {
+    if (err) throw err;
+    res.send('Projeto excluído com sucesso');
+  });
+});
+
+// Excluir serviço
+app.delete('/services/:id', (req, res) => {
+  const { id } = req.params;
+  console.log(id);
+  connection.query('DELETE FROM services WHERE id = ?', id, (err, result) => {
+    if (err) throw err;
+    res.send('Projeto excluído com sucesso');
+  });
+});
 
 // Iniciar o servidor
 app.listen(port, () => {

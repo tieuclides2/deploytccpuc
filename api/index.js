@@ -8,9 +8,10 @@ const port = 3000;
 
 // Configuração do middleware CORS
 const corsOptions = {
-  origin: '*', // Permite todas as origens. Altere para um domínio específico se necessário.
+  origin: 'http://localhost:3000', // Altere para seu domínio específico se necessário.
   methods: 'GET,POST,PUT,DELETE',
-  allowedHeaders: 'Content-Type,Authorization',
+  allowedHeaders: 'Content-Type,Authorization', // Corrigido aqui
+  optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
 
@@ -19,11 +20,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Adicionar cabeçalhos CORS manualmente
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*'); // Permite todas as origens
+  res.header('Access-Control-Allow-Origin', 'http://localhost:3000'); // Altere para seu domínio específico se necessário
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS'); // Permite esses métodos
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Permite esses cabeçalhos
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return res.sendStatus(204); // Responde com status 204 para requisições OPTIONS
   }
   next();
 });

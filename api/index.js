@@ -90,7 +90,7 @@ app.get('/categorias', async (req, res) => {
   try {
     await client.connect();
     const result = await client.query('SELECT * FROM category');
-    res.status(200).json(result)
+    res.status(200).json(result.rows)
   }
   finally {
     client.end()

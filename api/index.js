@@ -5,10 +5,25 @@ const bodyParser = require('body-parser');
 
 const cors = require('cors');
 
+const corsOptions = {
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+
 
 const app = express();
 const port = 3000;
-app.use(cors());
+app.use(cors(corsOptions));
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "deployfrontendtcc.vercel.app");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+    next();
+});
 
 // Configuração do MySQL
 // const connection = mysql.createConnection({
